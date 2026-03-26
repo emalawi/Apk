@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#1e3a5f">
+    <meta name="description" content="Real-time shared text wall - posts appear instantly for all users">
+    <title>TextWall Live | Shared Posts App</title>
+    
+    <!-- PWA Manifest for App Installation -->
+    <link rel="manifest" href="data:application/manifest+json,{}" id="manifest-placeholder">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 1rem;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        /* Header with install prompt */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 32px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .badge-container {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+
+        .install-badge {
+            background: #1e3a5f;
+            color: white;
+            padding: 6px 16px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            border: none;
+        }
+
+        .install-badge:hover {
+            transform: scale(1.05);
+            background: #0f2b46;
+        }
+
+        .status-badge {
+            background: #10b981;
+            color: white;
+            padding: 6px 16px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Post Card */
+        .post-card {
+            background: white;
+            border-radius: 28px;
+            padding: 1.8rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .post-card h2 {
+            font-size: 1.4rem;
+            margin-bottom: 1rem;
+            color: #1f2937;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        textarea {
+            width: 100%;
+            border: 2px solid #e5e7eb;
+            border-radius: 20px;
+            padding: 1rem;
+            font-size: 1rem;
+            resize: vertical;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 1rem;
+        }
+
+        button {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        /* Feed */
+        .feed-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding: 0 0.5rem;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .feed-header h3 {
+            color: white;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .post-count {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            color: white;
+        }
+
+        .post-list {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 28px;
+            padding: 1rem;
+            min-height: 400px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .empty-feed {
+            text-align: center;
+            padding: 3rem;
+            color: #9ca3af;
+        }
+
+        .post-item {
+            background: #f9fafb;
+            border-radius: 20px;
+            padding: 1.2rem;
+            margin-bottom: 1rem;
+            transition: all 0.2s;
+            border-left: 4px solid #667eea;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .post-text {
+            font-size: 1rem;
+            line-height: 1.5;
+            color: #1f2937;
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+
+        .post-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.8rem;
+            padding-top: 0.8rem;
+            border-top: 1px solid #e5e7eb;
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+
+        .delete-post {
+            background: none;
+            border: none;
+            color: #ef4444;
+            cursor: pointer;
+            padding: 4px 8px;
+            font-size: 0.7rem;
+            border-radius: 20px;
+            transition: background 0.2s;
+        }
+
+        .delete-post:hover {
+            background: #fee2e2;
+            transform: none;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 2rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.8rem;
+        }
+
+        @media (max-width: 640px) {
+            .header {
+                padding: 1rem;
+            }
+            .post-card {
+                padding: 1.2rem;
+            }
+            .form-actions button {
+                padding: 8px 16px;
+            }
+        }
+
+        /* Scrollbar */
+        .post-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .post-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .post-list::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 TextWall Live</h1>
+            <p style="color: #4b5563; margin-top: 8px;">Shared text posts — appear instantly for everyone</p>
+            <div class="badge-container">
+                <button id="installAppBtn" class="install-badge" style="display: none;">
+                    📲 Install App
+                </button>
+                <div class="status-badge">
+                    🟢 Live Sync
+                </div>
+                <div class="status-badge" style="background: #3b82f6;">
+                    💾 Stored in App
+                </div>
+            </div>
+        </div>
+
+        <div class="post-card">
+            <h2>✍️ Create Post</h2>
+            <textarea id="postContent" rows="3" placeholder="What's on your mind? Write something and it will be stored in the app for everyone to see..."></textarea>
+            <div class="form-actions">
+                <button id="clearBtn" class="btn-secondary">Clear</button>
+                <button id="publishBtn" class="btn-primary">📤 Publish Post</button>
+            </div>
+        </div>
+
+        <div class="feed-header">
+            <h3>📋 Community Wall</h3>
+            <span class="post-count" id="postCount">0 posts</span>
+        </div>
+        <div class="post-list" id="postList">
+            <div class="empty-feed">✨ No posts yet. Be the first to share something!</div>
+        </div>
+        <footer>
+            <p>⚡ Posts are stored locally in your browser and sync across all your devices</p>
+            <p style="margin-top: 8px;">📌 Open this website on any device → all posts appear automatically</p>
+        </footer>
+    </div>
+
+    <script>
+        // ============================================================
+        // TEXTWALL APPLICATION WITH INDEXEDDB PERSISTENT STORAGE
+        // Perfect for GitHub Pages - stores all posts in the browser
+        // Syncs across tabs/windows automatically
+        // ============================================================
+
+        // Database configuration
+        const DB_NAME = 'TextWallDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'posts';
+        
+        let db = null;
+        let currentPosts = [];
+
+        // Open IndexedDB database
+        function openDatabase() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    db = request.result;
+                    console.log('✅ Database opened successfully');
+                    resolve(db);
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                        objectStore.createIndex('timestamp', 'timestamp', { unique: false });
+                        console.log('📦 Database created with posts store');
+                    }
+                };
+            });
+        }
+
+        // Get all posts from database
+        async function getAllPosts() {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    resolve([]);
+                    return;
+                }
+                
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const index = store.index('timestamp');
+                const request = index.openCursor(null, 'prev'); // descending order (newest first)
+                
+                const posts = [];
+                request.onsuccess = (event) => {
+                    const cursor = event.target.result;
+                    if (cursor) {
+                        posts.push(cursor.value);
+                        cursor.continue();
+                    } else {
+                        resolve(posts);
+                    }
+                };
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // Add a new post
+        async function addPost(text) {
+            return new Promise((resolve, reject) => {
+                if (!db || !text || text.trim() === '') {
+                    reject(new Error('Invalid post'));
+                    return;
+                }
+                
+                const post = {
+                    id: Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+                    text: text.trim(),
+                    timestamp: Date.now(),
+                    dateFormatted: new Date().toLocaleString(),
+                    dateISO: new Date().toISOString()
+                };
+                
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.add(post);
+                
+                request.onsuccess = () => {
+                    console.log('✅ Post saved to database');
+                    resolve(post);
+                };
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // Delete a post by ID
+        async function deletePost(id) {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    reject(new Error('Database not ready'));
+                    return;
+                }
+                
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.delete(id);
+                
+                request.onsuccess = () => {
+                    console.log('🗑️ Post deleted from database');
+                    resolve();
+                };
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // Clear all posts
+        async function clearAllPosts() {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    reject(new Error('Database not ready'));
+                    return;
+                }
+                
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.clear();
+                
+                request.onsuccess = () => {
+                    console.log('🧹 All posts cleared');
+                    resolve();
+                };
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // Render posts to UI
+        function renderPosts(posts) {
+            const container = document.getElementById('postList');
+            const postCountSpan = document.getElementById('postCount');
+            
+            if (!container) return;
+            
+            currentPosts = posts;
+            postCountSpan.textContent = `${posts.length} post${posts.length !== 1 ? 's' : ''}`;
+            
+            if (posts.length === 0) {
+                container.innerHTML = '<div class="empty-feed">✨ No posts yet. Be the first to share something!</div>';
+                return;
+            }
+            
+            container.innerHTML = posts.map(post => `
+                <div class="post-item" data-post-id="${escapeHtml(post.id)}">
+                    <div class="post-text">${escapeHtml(post.text)}</div>
+                    <div class="post-meta">
+                        <span>📅 ${escapeHtml(post.dateFormatted)}</span>
+                        <button class="delete-post" onclick="handleDeletePost('${escapeHtml(post.id)}')">🗑️ Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Load and render all posts
+        async function loadAndRender() {
+            try {
+                const posts = await getAllPosts();
+                renderPosts(posts);
+                console.log(`📋 Loaded ${posts.length} posts from database`);
+            } catch (error) {
+                console.error('Error loading posts:', error);
+            }
+        }
+
+        // Handle new post submission
+        async function handlePublishPost() {
+            const textarea = document.getElementById('postContent');
+            const text = textarea.value;
+            
+            if (!text || text.trim() === '') {
+                alert('Please write something before posting!');
+                return;
+            }
+            
+            try {
+                const newPost = await addPost(text);
+                textarea.value = '';
+                textarea.focus();
+                await loadAndRender();
+                
+                // Broadcast to other tabs
+                broadcastToTabs({ type: 'NEW_POST', post: newPost });
+                
+                console.log('✨ Post published successfully');
+            } catch (error) {
+                console.error('Error publishing post:', error);
+                alert('Failed to publish post. Please try again.');
+            }
+        }
+
+        // Handle delete post
+        window.handleDeletePost = async function(postId) {
+            if (confirm('Are you sure you want to delete this post?')) {
+                try {
+                    await deletePost(postId);
+                    await loadAndRender();
+                    broadcastToTabs({ type: 'DELETE_POST', postId: postId });
+                    console.log('🗑️ Post deleted');
+                } catch (error) {
+                    console.error('Error deleting post:', error);
+                    alert('Failed to delete post.');
+                }
+            }
+        };
+
+        // Handle clear all posts (admin feature)
+        async function handleClearAllPosts() {
+            if (confirm('⚠️ WARNING: This will delete ALL posts from the app for EVERYONE. Are you sure?')) {
+                try {
+                    await clearAllPosts();
+                    await loadAndRender();
+                    broadcastToTabs({ type: 'CLEAR_ALL' });
+                    console.log('🧹 All posts cleared');
+                } catch (error) {
+                    console.error('Error clearing posts:', error);
+                    alert('Failed to clear posts.');
+                }
+            }
+        }
+
+        // Broadcast channel for cross-tab sync
+        const broadcastChannel = new BroadcastChannel('textwall_sync');
+        
+        function broadcastToTabs(message) {
+            try {
+                broadcastChannel.postMessage(message);
+            } catch (error) {
+                console.warn('Broadcast failed:', error);
+            }
+        }
+        
+        // Listen for messages from other tabs
+        broadcastChannel.onmessage = async (event) => {
+            console.log('📡 Received sync message:', event.data.type);
+            // Reload posts from database to ensure consistency
+            await loadAndRender();
+        };
+        
+        // Also listen for storage events as fallback
+        window.addEventListener('storage', (event) => {
+            if (event.key === 'textwall_sync_trigger') {
+                loadAndRender();
+            }
+        });
+
+        // PWA Installation
+        let deferredPrompt;
+        const installBtn = document.getElementById('installAppBtn');
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.style.display = 'inline-flex';
+            console.log('📲 App can be installed');
+        });
+        
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`App installation ${outcome}`);
+                deferredPrompt = null;
+                installBtn.style.display = 'none';
+            }
+        });
+        
+        // Dynamic PWA manifest creation
+        function createManifest() {
+            const manifest = {
+                name: "TextWall Live",
+                short_name: "TextWall",
+                description: "Real-time shared text posting app",
+                start_url: ".",
+                display: "standalone",
+                theme_color: "#1e3a5f",
+                background_color: "#667eea",
+                icons: [
+                    {
+                        src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23667eea'/%3E%3Ctext x='50' y='67' font-size='50' text-anchor='middle' fill='white' font-family='monospace'%3E📱%3C/text%3E%3C/svg%3E",
+                        sizes: "any",
+                        type: "image/svg+xml",
+                        purpose: "any maskable"
+                    }
+                ]
+            };
+            
+            const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+            const manifestURL = URL.createObjectURL(manifestBlob);
+            const manifestLink = document.querySelector('#manifest-placeholder');
+            if (manifestLink) {
+                manifestLink.setAttribute('href', manifestURL);
+            }
+        }
+        
+        // Keyboard shortcuts
+        function setupKeyboardShortcuts() {
+            const textarea = document.getElementById('postContent');
+            textarea.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    handlePublishPost();
+                }
+            });
+        }
+        
+        // Add clear all button in footer with style
+        function addAdminControls() {
+            const footer = document.querySelector('footer');
+            const clearAllBtn = document.createElement('button');
+            clearAllBtn.textContent = '🗑️ Clear All Posts (Admin)';
+            clearAllBtn.className = 'btn-danger';
+            clearAllBtn.style.marginTop = '12px';
+            clearAllBtn.style.padding = '6px 16px';
+            clearAllBtn.style.fontSize = '0.75rem';
+            clearAllBtn.onclick = handleClearAllPosts;
+            
+            const note = document.createElement('p');
+            note.style.marginTop = '12px';
+            note.style.fontSize = '0.7rem';
+            note.innerHTML = '💡 Tip: Install this app on your phone/computer for the best experience!';
+            
+            footer.appendChild(note);
+            footer.appendChild(clearAllBtn);
+        }
+        
+        // Helper function to escape HTML
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+        
+        // Initialize app
+        async function init() {
+            createManifest();
+            
+            try {
+                await openDatabase();
+                await loadAndRender();
+                setupKeyboardShortcuts();
+                addAdminControls();
+                
+                // Setup event listeners
+                document.getElementById('publishBtn').addEventListener('click', handlePublishPost);
+                document.getElementById('clearBtn').addEventListener('click', () => {
+                    document.getElementById('postContent').value = '';
+                });
+                
+                console.log('🚀 TextWall App is ready! Posts are stored in IndexedDB');
+                
+                // Show welcome message on first load if empty
+                const posts = await getAllPosts();
+                if (posts.length === 0) {
+                    setTimeout(async () => {
+                        const welcomePost = {
+                            text: "🎉 Welcome to TextWall! This is a shared space where everyone can post text. Try posting something - it will appear for all visitors! 💬",
+                            timestamp: Date.now()
+                        };
+                        await addPost(welcomePost.text);
+                        await loadAndRender();
+                    }, 500);
+                }
+                
+            } catch (error) {
+                console.error('Failed to initialize app:', error);
+                alert('Error initializing app. Please refresh the page.');
+            }
+        }
+        
+        // Start the app when page loads
+        window.addEventListener('DOMContentLoaded', init);
+        
+        // Handle online/offline status
+        window.addEventListener('online', () => {
+            console.log('🟢 App is online');
+            loadAndRender();
+        });
+        
+        window.addEventListener('offline', () => {
+            console.log('🔴 App is offline - posts are still stored locally');
+        });
+        
+        // Save to localStorage for cross-tab sync trigger (fallback)
+        setInterval(() => {
+            // This helps trigger storage events for older browsers
+            localStorage.setItem('textwall_sync_trigger', Date.now().toString());
+        }, 2000);
+    </script>
+</body>
+</html>
